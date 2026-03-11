@@ -47,7 +47,9 @@ export default function AdminProducts() {
   const handleChange = (e) => setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   const handleFile = (e) => {
     const file = e.target.files[0]
-    if (file) { setImageFile(file); setImagePreview(URL.createObjectURL(file)) }
+    if (file) {
+      setImageFile(file); setImagePreview(URL.createObjectURL(file))
+    }
   }
 
   const handleSave = async (e) => {

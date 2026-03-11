@@ -4,7 +4,7 @@ import '../styles/chatbot.css'
 const INITIAL_MESSAGE = {
   id: 1,
   from: 'bot',
-  text: "👋 Hi! I'm **GrocyBot**, your Smart Grocery assistant!\n\nI can help you with:\n• 🛒 Products & Categories\n• 📦 Orders & Tracking\n• 💳 Payments & Checkout\n• 🚚 Delivery Information\n• 🔄 Returns & Refunds\n\nHow can I help you today?",
+  text: "👋 Hi! I'm **GrocyBot**, your Arunachalam Grocery assistant!\n\nI can help you with:\n• 🛒 Products & Categories\n• 📦 Orders & Tracking\n• 💳 Payments & Checkout\n• 🚚 Delivery Information\n• 🔄 Returns & Refunds\n\nHow can I help you today?",
   time: new Date(),
 }
 

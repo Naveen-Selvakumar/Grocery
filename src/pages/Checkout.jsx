@@ -87,7 +87,7 @@ export default function Checkout() {
       key:         rzpOrder.keyId,
       amount:      rzpOrder.amount,
       currency:    rzpOrder.currency,
-      name:        'Smart Grocery Store',
+      name:        'Arunachalam Grocery Store',
       description: 'Order Payment',
       order_id:    rzpOrder.orderId,
       prefill: {

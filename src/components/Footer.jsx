@@ -11,7 +11,7 @@ export default function Footer() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
               <div style={{ width: 40, height: 40, background: 'var(--primary)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>🛒</div>
-              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.2rem', color: '#fff' }}>Smart Grocery</span>
+              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.2rem', color: '#fff' }}>Arunachalam Grocery</span>
             </div>
             <p style={{ fontSize: '0.88rem', lineHeight: 1.7, opacity: .75, marginBottom: 20 }}>
               Fresh groceries delivered to your door. Quality products, best prices, fastest delivery.
@@ -72,7 +72,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,.08)', padding: '20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, fontSize: '0.82rem', opacity: .6 }}>
-          <span>© {new Date().getFullYear()} Smart Grocery Store. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} Arunachalam Grocery Store. All rights reserved.</span>
           <div style={{ display: 'flex', gap: 16 }}>
             <a href="#">Privacy Policy</a>
             <a href="#">Terms of Service</a>

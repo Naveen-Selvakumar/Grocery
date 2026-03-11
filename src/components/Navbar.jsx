@@ -38,7 +38,7 @@ export default function Navbar() {
         {/* Logo */}
         <Link to="/" className="navbar-logo">
           <div className="logo-icon">🛒</div>
-          <span className="logo-text">Smart<span> Grocery</span></span>
+          <span className="logo-text">Arunachalam<span> Grocery</span></span>
         </Link>
 
         {/* Search Bar */}
