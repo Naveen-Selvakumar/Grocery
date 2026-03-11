@@ -75,18 +75,13 @@ export default function Login() {
             </div>
 
             <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center', marginTop: 8 }} disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Logging in...' : 'Login'}
             </button>
           </form>
 
           <div style={{ textAlign: 'center', marginTop: 24, borderTop: '1px solid var(--border)', paddingTop: 20, fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
             Don't have an account?{' '}
-            <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600 }}>Create one</Link>
-          </div>
-
-          {/* Demo credentials hint */}
-          <div style={{ marginTop: 16, padding: '12px 16px', background: 'rgba(255,107,0,.06)', border: '1px dashed rgba(255,107,0,.3)', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-            <strong style={{ color: 'var(--primary)' }}>Demo:</strong> admin@demo.com / 123456 (Admin) &nbsp;|&nbsp; user@demo.com / 123456 (User)
+            <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600 }}>Signin</Link>
           </div>
         </div>
       </div>

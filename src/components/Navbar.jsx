@@ -105,7 +105,9 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            <Link to="/login" className="btn btn-primary btn-sm">Login</Link>
+            <Link to="/login" className="btn btn-primary" style={{ padding: '8px 22px', fontWeight: 700, fontSize: '0.95rem', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="person" size={18} /> Login
+            </Link>
           )}
 
           {/* Mobile Menu */}
