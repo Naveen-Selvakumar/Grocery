@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Icon } from '../components/Icon'
-import { getMyOrders } from '../services/api'
+import { getMyOrders, addReview } from '../services/api'
 import { PageLoader } from '../components/Loader'
 import '../styles/cart.css'
 
@@ -15,10 +15,85 @@ const statusColor = {
   Cancelled: '#ef4444',
 }
 
+/* ── Inline review form for a single product ─────────────── */
+function ReviewForm({ productId, productName, onDone }) {
+  const [rating, setRating]     = useState(5)
+  const [hovered, setHovered]   = useState(0)
+  const [comment, setComment]   = useState('')
+  const [saving, setSaving]     = useState(false)
+  const [error, setError]       = useState('')
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!comment.trim()) { setError('Please write a comment'); return }
+    setSaving(true); setError('')
+    try {
+      await addReview({ productId, rating, comment })
+      onDone(productId, rating)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not submit review')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}
+      style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '1rem 1.1rem', marginTop: 8 }}>
+      <div style={{ fontWeight: 700, fontSize: '.88rem', marginBottom: 10, color: '#0f172a' }}>
+        Review: {productName}
+      </div>
+
+      {/* Star selector */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+        {[1, 2, 3, 4, 5].map(s => (
+          <button key={s} type="button"
+            onMouseEnter={() => setHovered(s)}
+            onMouseLeave={() => setHovered(0)}
+            onClick={() => setRating(s)}
+            style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer', fontSize: '1.5rem',
+              color: s <= (hovered || rating) ? '#f59e0b' : '#d1d5db',
+              transform: s <= (hovered || rating) ? 'scale(1.2)' : 'scale(1)',
+              transition: 'transform .15s, color .15s' }}>
+            ★
+          </button>
+        ))}
+        <span style={{ fontSize: '.8rem', color: '#64748b', alignSelf: 'center', marginLeft: 4 }}>
+          {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][hovered || rating]}
+        </span>
+      </div>
+
+      {/* Comment */}
+      <textarea
+        rows={3}
+        className="form-control"
+        placeholder="Share your experience with this product…"
+        value={comment}
+        onChange={e => setComment(e.target.value)}
+        style={{ fontSize: '.87rem', resize: 'vertical', marginBottom: 8 }}
+      />
+
+      {error && <div style={{ color: '#dc2626', fontSize: '.8rem', marginBottom: 6 }}>{error}</div>}
+
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn btn-primary btn-sm" type="submit" disabled={saving}
+          style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <Icon name="rate_review" size={14} />
+          {saving ? 'Submitting…' : 'Submit Review'}
+        </button>
+        <button className="btn btn-ghost btn-sm" type="button" onClick={() => onDone(null)}>Cancel</button>
+      </div>
+    </form>
+  )
+}
+
 export default function Orders() {
-  const [orders, setOrders] = useState([])
+  const [orders, setOrders]   = useState([])
   const [loading, setLoading] = useState(true)
-  const location = useLocation()
+  // openReview: productId currently showing review form
+  const [openReview, setOpenReview] = useState(null)
+  // reviewed: Set of productIds reviewed in this session
+  const [reviewed, setReviewed] = useState(new Set())
+  const location  = useLocation()
   const justOrdered = location.state?.success
 
   useEffect(() => {
@@ -27,6 +102,11 @@ export default function Orders() {
       .catch(() => setOrders([]))
       .finally(() => setLoading(false))
   }, [])
+
+  const handleReviewDone = (productId) => {
+    if (productId) setReviewed(prev => new Set([...prev, productId]))
+    setOpenReview(null)
+  }
 
   if (loading) return <PageLoader />
 
@@ -59,6 +139,7 @@ export default function Orders() {
           <div className="orders-list">
             {orders.map((order) => {
               const stepIdx = STATUS_STEPS.indexOf(order.orderStatus)
+              const isDelivered = order.orderStatus === 'Delivered'
               return (
                 <div key={order._id} className="order-card">
                   <div className="order-card-header">
@@ -89,16 +170,48 @@ export default function Orders() {
 
                   {/* Order Items */}
                   <div className="order-items-preview">
-                    {(order.items || []).slice(0, 3).map((item, idx) => (
-                      <div key={idx} className="order-item-preview">
-                        <span className="order-item-name">{item.product?.name || 'Product'}</span>
-                        <span className="order-item-qty">×{item.quantity}</span>
-                        <span className="order-item-price">₹{(item.price * item.quantity).toFixed(2)}</span>
-                      </div>
-                    ))}
-                    {order.items?.length > 3 && (
-                      <div className="order-more">+{order.items.length - 3} more items</div>
-                    )}
+                    {(order.items || []).map((item, idx) => {
+                      const pid = item.product?._id || item.product
+                      const alreadyReviewed = reviewed.has(pid)
+                      const showingForm = openReview === pid
+                      return (
+                        <div key={idx}>
+                          <div className="order-item-preview" style={{ alignItems: 'center' }}>
+                            <span className="order-item-name">{item.product?.name || 'Product'}</span>
+                            <span className="order-item-qty">×{item.quantity}</span>
+                            <span className="order-item-price">₹{(item.price * item.quantity).toFixed(2)}</span>
+
+                            {/* Rate button — only for delivered orders */}
+                            {isDelivered && pid && (
+                              alreadyReviewed ? (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '.75rem', color: '#10b981', fontWeight: 600, marginLeft: 8, whiteSpace: 'nowrap' }}>
+                                  <Icon name="check_circle" size={13} /> Reviewed
+                                </span>
+                              ) : (
+                                <button
+                                  className="btn btn-ghost btn-sm"
+                                  onClick={() => setOpenReview(showingForm ? null : pid)}
+                                  style={{ marginLeft: 8, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4, fontSize: '.75rem',
+                                    color: showingForm ? '#6b7280' : '#f59e0b',
+                                    borderColor: showingForm ? '#e5e7eb' : '#fde68a' }}>
+                                  <Icon name="star" size={13} />
+                                  {showingForm ? 'Cancel' : 'Rate'}
+                                </button>
+                              )
+                            )}
+                          </div>
+
+                          {/* Inline review form */}
+                          {showingForm && (
+                            <ReviewForm
+                              productId={pid}
+                              productName={item.product?.name || 'this product'}
+                              onDone={handleReviewDone}
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
 
                   <div className="order-card-footer">

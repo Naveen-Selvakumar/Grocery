@@ -69,6 +69,9 @@ export const getDashboardStats = () => API.get('/dashboard/stats')
 export const createRazorpayOrder   = (data) => API.post('/payment/create-order', data)
 export const verifyRazorpayPayment = (data) => API.post('/payment/verify', data)
 
+// ── Chatbot ───────────────────────────────────────────────────
+export const sendChatMessage = (data) => API.post('/chat', data)
+
 // ── OCR ───────────────────────────────────────────────────────
 export const scanBill = (formData) => API.post('/ocr/scan-bill', formData, {
   headers: { 'Content-Type': 'multipart/form-data' },

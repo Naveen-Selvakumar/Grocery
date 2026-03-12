@@ -1,19 +1,31 @@
 import { useState, useRef, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { sendChatMessage } from '../services/api'
 import '../styles/chatbot.css'
 
-const INITIAL_MESSAGE = {
+const getInitialMessage = (user) => ({
   id: 1,
   from: 'bot',
-  text: "👋 Hi! I'm **GrocyBot**, your Arunachalam Grocery assistant!\n\nI can help you with:\n• 🛒 Products & Categories\n• 📦 Orders & Tracking\n• 💳 Payments & Checkout\n• 🚚 Delivery Information\n• 🔄 Returns & Refunds\n\nHow can I help you today?",
+  text: user
+    ? `👋 Hi **${user.name}**! I'm **GrocyBot**, your Arunachalam Grocery assistant!\n\nSince you're logged in, I can:\n• 📦 **Track your orders** – ask "my orders"\n• 👤 **Show your profile** – ask "my profile"\n• 💰 **Spending summary** – ask "my spending"\n• 🛒 Products, Payments, Delivery & more\n\nHow can I help you today?`
+    : `👋 Hi! I'm **GrocyBot**, your Arunachalam Grocery assistant!\n\nI can help you with:\n• 🛒 Products & Categories\n• 📦 Orders & Tracking\n• 💳 Payments & Checkout\n• 🚚 Delivery Information\n• 🔄 Returns & Refunds\n\nHow can I help you today?`,
   time: new Date(),
-}
+})
 
-const QUICK_REPLIES = [
+const QUICK_REPLIES_GUEST = [
   'Track my order',
   'Payment methods',
   'Delivery time',
   'Return policy',
   'How to checkout',
+]
+
+const QUICK_REPLIES_USER = [
+  'My orders',
+  'Latest order',
+  'My profile',
+  'Payment methods',
+  'Delivery time',
 ]
 
 function formatTime(date) {
@@ -36,9 +48,10 @@ function renderText(text) {
 }
 
 export default function Chatbot() {
+  const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [messages, setMessages] = useState([INITIAL_MESSAGE])
+  const [messages, setMessages] = useState(() => [getInitialMessage(user)])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [hasUnread, setHasUnread] = useState(false)
@@ -86,14 +99,11 @@ export default function Chatbot() {
     setIsTyping(true)
 
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText }),
-      })
-      const data = await res.json()
+      // sendChatMessage uses the axios API instance which auto-attaches the
+      // Authorization header from localStorage, so the backend can identify
+      // the logged-in user and return personalised live data.
+      const { data } = await sendChatMessage({ message: userText })
 
-      // Simulate a small typing delay for natural feel
       setTimeout(() => {
         setIsTyping(false)
         const botMsg = {
@@ -129,7 +139,7 @@ export default function Chatbot() {
   }
 
   const clearChat = () => {
-    setMessages([INITIAL_MESSAGE])
+    setMessages([getInitialMessage(user)])
   }
 
   return (
@@ -228,9 +238,9 @@ export default function Chatbot() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Quick replies */}
+              {/* Quick replies – personalized when logged in */}
               <div className="chatbot-quick-replies">
-                {QUICK_REPLIES.map(qr => (
+                {(user ? QUICK_REPLIES_USER : QUICK_REPLIES_GUEST).map(qr => (
                   <button
                     key={qr}
                     className="chatbot-quick-btn"
