@@ -1,8 +1,36 @@
 import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { createWorker } from 'tesseract.js'
 import { Icon } from '../components/Icon'
-import { scanBill, addToCart } from '../services/api'
+import { addToCart } from '../services/api'
 import { useCart } from '../context/CartContext'
+
+// ── Same keyword filter as the backend ocrController ──────────
+const GROCERY_KEYWORDS = [
+  'milk','bread','eggs','butter','cheese','rice','wheat','flour','sugar','salt',
+  'oil','water','juice','coffee','tea','soap','potato','onion','tomato','apple',
+  'banana','mango','lemon','chicken','fish','mutton','paneer','curd','yogurt',
+  'ghee','pulses','dal','lentil','biscuit','chips','noodles','pasta','shampoo',
+  'detergent','powder','cream','gel','sauce','ketchup','vinegar','honey','jam',
+  'pickle','masala','spice','pepper','cumin','coriander','turmeric','chilli',
+  'garam','spinach','carrot','orange','broccoli','lettuce','cabbage','peas',
+]
+
+const extractGroceryItems = (text) => {
+  const items = []
+  text.split('\n').map(l => l.trim()).filter(Boolean).forEach(line => {
+    const cleaned = line.replace(/[$₹€£\d.,:\-|]/g,' ').replace(/\s{2,}/g,' ').trim().toLowerCase()
+    if (cleaned.length < 3) return
+    const wordCount = cleaned.split(' ').filter(w => w.length > 2).length
+    const isAlpha   = /^[a-z\s]+$/.test(cleaned)
+    const isGrocery = GROCERY_KEYWORDS.some(kw => cleaned.includes(kw))
+    if (isGrocery || (wordCount >= 1 && wordCount <= 6 && isAlpha)) {
+      const formatted = cleaned.split(' ').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ').trim()
+      if (formatted.length > 2 && !items.includes(formatted)) items.push(formatted)
+    }
+  })
+  return items
+}
 
 const AI_URL = import.meta.env.VITE_AI_URL || 'http://localhost:8000'
 
@@ -11,6 +39,7 @@ export default function OCRScanner() {
   const [preview, setPreview]   = useState('')
   // step: idle | scanning | matching | done
   const [step, setStep]         = useState('idle')
+  const [ocrProgress, setOcrProg] = useState(0)    // 0-100
   const [rawItems, setRawItems] = useState([])     // strings from OCR
   const [rawText, setRawText]   = useState('')
   const [confidence, setConf]   = useState(null)
@@ -36,28 +65,38 @@ export default function OCRScanner() {
 
   const clearAll = () => {
     setFile(null); setPreview(''); setStep('idle')
-    setRawItems([]); setRawText(''); setConf(null)
+    setOcrProg(0); setRawItems([]); setRawText(''); setConf(null)
     setAiResult(null); setError(''); setAdded(new Set())
   }
 
   /* ── Main scan + AI match flow ────────────────────────── */
   const handleScan = async () => {
     if (!file) { setError('Please upload an image first'); return }
-    setError('')
+    setError(''); setOcrProg(0)
 
-    // ── Step 1: OCR (Node backend) ──
+    // ── Step 1: Client-side OCR (no server timeout!) ──
     setStep('scanning')
     let items = []
+    let rawOcrText = ''
+    let conf = null
     try {
-      const fd = new FormData()
-      fd.append('bill', file)
-      const { data } = await scanBill(fd)
-      items = data.data?.detectedItems || []
-      setRawText(data.data?.rawText || '')
-      setConf(data.data?.confidence ?? null)
+      const worker = await createWorker('eng', 1, {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            setOcrProg(Math.round(m.progress * 100))
+          }
+        },
+      })
+      const { data } = await worker.recognize(file)
+      await worker.terminate()
+      rawOcrText = data.text || ''
+      conf = data.confidence ? parseFloat((data.confidence / 100).toFixed(2)) : null
+      items = extractGroceryItems(rawOcrText)
+      setRawText(rawOcrText.trim())
+      setConf(conf)
       setRawItems(items)
     } catch (err) {
-      setError(err.response?.data?.message || 'OCR scan failed. Try a clearer image.')
+      setError('OCR failed: ' + (err.message || 'Could not read image text.'))
       setStep('idle')
       return
     }
@@ -161,16 +200,23 @@ export default function OCRScanner() {
             {/* ── Progress indicator ──────────────────── */}
             {(step === 'scanning' || step === 'matching') && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: '1rem', padding: '14px 16px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0' }}>
-                <div style={{ width: 22, height: 22, borderRadius: '50%', border: '3px solid #16a34a', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
-                <div>
+                <div style={{ position: 'relative', width: 28, height: 28, flexShrink: 0 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', border: '3px solid #16a34a', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+                </div>
+                <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: '.88rem', color: '#15803d' }}>
                     {step === 'scanning' ? '🔍 Step 1 / 2 — OCR Scanning…' : '🤖 Step 2 / 2 — AI Matching Products…'}
                   </div>
                   <div style={{ fontSize: '.75rem', color: '#16a34a', marginTop: 2 }}>
                     {step === 'scanning'
-                      ? 'Tesseract.js is reading text from your bill image'
+                      ? `Reading text in your browser — ${ocrProgress}%`
                       : 'Sentence Transformer is comparing items with your store catalogue'}
                   </div>
+                  {step === 'scanning' && (
+                    <div style={{ marginTop: 5, height: 4, background: '#bbf7d0', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${ocrProgress}%`, background: '#16a34a', borderRadius: 4, transition: 'width .3s ease' }} />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
