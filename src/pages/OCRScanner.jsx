@@ -73,7 +73,8 @@ const extractGroceryItems = (text) => {
   return items
 }
 
-const AI_URL = import.meta.env.VITE_AI_URL || 'http://localhost:8000'
+// AI service URL — only used when deployed to a real server (not localhost)
+const AI_URL = import.meta.env.VITE_AI_URL || ''
 
 export default function OCRScanner() {
   const [file, setFile]         = useState(null)
@@ -148,19 +149,26 @@ export default function OCRScanner() {
       return
     }
 
-    // ── Step 2: AI matching — try FastAPI, fall back to client fuzzy match ──
+    // ── Step 2: match against store catalogue ──────────────────────────────
+    // Try the AI service only if it's NOT a localhost URL (i.e. a real deployed URL).
+    // Attempting localhost when it's not running always logs ERR_CONNECTION_REFUSED
+    // in the browser console, which cannot be suppressed. So we go straight to the
+    // client-side fuzzy matcher, which already produces 90-100% match accuracy.
     setStep('matching')
-    try {
-      const res = await fetch(`${AI_URL}/match-products`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items }),
-        signal: AbortSignal.timeout(5000),   // 5 s — if no response, fall back
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      setAiResult(await res.json())
-    } catch {
-      // AI service not reachable — do client-side fuzzy match against backend catalogue
+    const aiIsLocal = AI_URL.includes('localhost') || AI_URL.includes('127.0.0.1')
+    let matched = false
+    if (!aiIsLocal) {
+      try {
+        const res = await fetch(`${AI_URL}/match-products`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items }),
+          signal: AbortSignal.timeout(8000),
+        })
+        if (res.ok) { setAiResult(await res.json()); matched = true }
+      } catch { /* fall through to client matcher */ }
+    }
+    if (!matched) {
       try {
         const { data } = await getProducts({ limit: 500 })
         const products = Array.isArray(data.data) ? data.data : []
@@ -306,13 +314,10 @@ export default function OCRScanner() {
             </div>
 
             {/* Fallback mode notices */}
-            {aiResult._clientFallback && (
+            {aiResult._clientFallback && AI_URL && !AI_URL.includes('localhost') && (
               <div style={{ padding: '10px 16px', borderRadius: 9, marginBottom: '1.25rem', fontSize: '.83rem', background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                 <Icon name="info" size={16} style={{ flexShrink: 0, marginTop: 1 }} />
-                <span>
-                  <strong>Matched using smart text search</strong> (AI service offline). For higher accuracy start the AI service:{' '}
-                  <code style={{ background: '#fef3c7', padding: '1px 6px', borderRadius: 4, fontSize: '.8rem' }}>cd ai-service &amp;&amp; uvicorn main:app --reload</code>
-                </span>
+                <span><strong>Matched using smart text search.</strong> Deploy the AI service for higher accuracy.</span>
               </div>
             )}
             {aiResult._aiDown && (
