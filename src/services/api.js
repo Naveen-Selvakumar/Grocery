@@ -16,6 +16,8 @@ export const registerUser = (data) => API.post('/auth/register', data)
 export const loginUser = (data) => API.post('/auth/login', data)
 export const getUserProfile = () => API.get('/auth/profile')
 export const updateUserProfile = (data) => API.put('/auth/profile', data)
+export const forgotPassword = (data) => API.post('/auth/forgot-password', data)
+export const resetPassword = (token, data) => API.put(`/auth/reset-password/${token}`, data)
 
 // ── Products ──────────────────────────────────────────────────
 export const getProducts = (params) => API.get('/products', { params })
@@ -71,5 +73,12 @@ export const verifyRazorpayPayment = (data) => API.post('/payment/verify', data)
 export const scanBill = (formData) => API.post('/ocr/scan-bill', formData, {
   headers: { 'Content-Type': 'multipart/form-data' },
 })
+
+// ── Offers ────────────────────────────────────────────────────
+export const getOfferCustomers = () => API.get('/offers/customers')
+export const sendOfferEmail = (data) => API.post('/offers/send', data)
+
+// ── Admin: manual low-stock alert email ──────────────────────
+export const triggerLowStockAlert = () => API.post('/products/low-stock-alert')
 
 export default API
