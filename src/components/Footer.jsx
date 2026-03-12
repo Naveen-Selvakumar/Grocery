@@ -52,10 +52,27 @@ export default function Footer() {
             </div>
           </div>
 
+          {/* Find Us */}
+          <div>
+            <h4 style={{ color: '#fff', marginBottom: 20, fontSize: '1rem' }}>Find Us</h4>
+            <div style={{ borderRadius: 10, overflow: 'hidden', border: '2px solid rgba(255,255,255,.12)' }}>
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d489.21606982631835!2d77.3596864428125!3d11.20770806637423!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba9057cbb7cf4ef%3A0xcd70ed04a6fc828a!2sARUNACHLAM%20MALIGAI!5e0!3m2!1sen!2sin!4v1773293443574!5m2!1sen!2sin"
+                width="100%"
+                height="220"
+                style={{ border: 0, display: 'block' }}
+                allowFullScreen=""
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Arunachalam Maligai Location"
+              />
+            </div>
+          </div>
+
           {/* Contact */}
           <div>
             <h4 style={{ color: '#fff', marginBottom: 20, fontSize: '1rem' }}>Contact Us</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {[
                 ['location_on', 'Arunachalam Maligai, Erode, Tamil Nadu'],
                 ['phone', '+91 98765 43210'],
@@ -66,19 +83,6 @@ export default function Footer() {
                   {text}
                 </div>
               ))}
-            </div>
-            {/* Google Maps embed */}
-            <div style={{ borderRadius: 10, overflow: 'hidden', border: '2px solid rgba(255,255,255,.12)' }}>
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d489.21606982631835!2d77.3596864428125!3d11.20770806637423!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ba9057cbb7cf4ef%3A0xcd70ed04a6fc828a!2sARUNACHLAM%20MALIGAI!5e0!3m2!1sen!2sin!4v1773293443574!5m2!1sen!2sin"
-                width="100%"
-                height="200"
-                style={{ border: 0, display: 'block' }}
-                allowFullScreen=""
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Arunachalam Maligai Location"
-              />
             </div>
           </div>
         </div>
