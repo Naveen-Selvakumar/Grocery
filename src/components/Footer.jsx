@@ -74,8 +74,8 @@ export default function Footer() {
             <h4 style={{ color: '#fff', marginBottom: 20, fontSize: '1rem' }}>Contact Us</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {[
-                ['location_on', 'Arunachalam Maligai, Erode, Tamil Nadu'],
-                ['phone', '+91 98765 43210'],
+                ['location_on', 'Nh Mine Road, 3/37, NH Mine Road, Tiruppur, Tamil Nadu 641666'],
+                ['phone', '+91 97919 82132'],
                 ['mail', 'support@smartgrocery.com'],
               ].map(([iconName, text], i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.86rem', opacity: .8 }}>
