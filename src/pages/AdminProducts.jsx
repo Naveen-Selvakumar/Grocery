@@ -47,9 +47,32 @@ export default function AdminProducts() {
   const handleChange = (e) => setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   const handleFile = (e) => {
     const file = e.target.files[0]
-    if (file) {
-      setImageFile(file); setImagePreview(URL.createObjectURL(file))
+    if (!file) return
+    // Compress image client-side so it never exceeds Vercel's 4.5 MB limit
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+    img.onload = () => {
+      const MAX = 1200 // max width/height in px
+      let { width, height } = img
+      if (width > MAX || height > MAX) {
+        if (width > height) { height = Math.round(height * MAX / width); width = MAX }
+        else { width = Math.round(width * MAX / height); height = MAX }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width; canvas.height = height
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(objectUrl)
+          const compressed = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })
+          setImageFile(compressed)
+          setImagePreview(URL.createObjectURL(compressed))
+        },
+        'image/jpeg',
+        0.82, // 82% quality — good balance of size vs clarity
+      )
     }
+    img.src = objectUrl
   }
 
   const handleSave = async (e) => {
