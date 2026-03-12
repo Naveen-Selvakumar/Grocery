@@ -2,8 +2,49 @@ import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { createWorker } from 'tesseract.js'
 import { Icon } from '../components/Icon'
-import { addToCart } from '../services/api'
+import { addToCart, getProducts } from '../services/api'
 import { useCart } from '../context/CartContext'
+
+// ── Client-side fuzzy matcher (used when AI service is offline) ──
+const norm = (s) => s.toLowerCase().replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim()
+
+const wordOverlapScore = (a, b) => {
+  const wa = norm(a).split(' ').filter(w => w.length > 1)
+  const wb = norm(b).split(' ').filter(w => w.length > 1)
+  const matches = wa.filter(w => wb.some(pw => pw.includes(w) || w.includes(pw))).length
+  return matches / Math.max(wa.length, wb.length, 1)
+}
+
+const clientMatchItems = (ocrItems, products) => {
+  const matched = []
+  const not_available = []
+  const usedIds = new Set()
+  for (const raw of ocrItems) {
+    let best = null; let bestScore = 0
+    for (const p of products) {
+      const exact = norm(p.name) === norm(raw)
+      const contains = norm(p.name).includes(norm(raw)) || norm(raw).includes(norm(p.name))
+      const overlap = wordOverlapScore(raw, p.name)
+      const score = exact ? 1 : contains ? 0.9 : overlap
+      if (score > bestScore && score >= 0.35) { best = p; bestScore = score }
+    }
+    if (best && !usedIds.has(String(best._id))) {
+      usedIds.add(String(best._id))
+      matched.push({
+        ocr_item: raw,
+        product_id: String(best._id),
+        matched_name: best.name,
+        price: best.price,
+        image: best.image,
+        quantity_in_stock: best.quantity ?? 0,
+        similarity: parseFloat(bestScore.toFixed(2)),
+      })
+    } else {
+      not_available.push(raw)
+    }
+  }
+  return { matched, not_available, _clientFallback: true }
+}
 
 // ── Same keyword filter as the backend ocrController ──────────
 const GROCERY_KEYWORDS = [
@@ -107,19 +148,26 @@ export default function OCRScanner() {
       return
     }
 
-    // ── Step 2: AI matching (FastAPI) ──
+    // ── Step 2: AI matching — try FastAPI, fall back to client fuzzy match ──
     setStep('matching')
     try {
       const res = await fetch(`${AI_URL}/match-products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items }),
+        signal: AbortSignal.timeout(5000),   // 5 s — if no response, fall back
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       setAiResult(await res.json())
     } catch {
-      // AI service not running — show all as not_available with warning
-      setAiResult({ matched: [], not_available: items, _aiDown: true })
+      // AI service not reachable — do client-side fuzzy match against backend catalogue
+      try {
+        const { data } = await getProducts({ limit: 500 })
+        const products = Array.isArray(data.data) ? data.data : []
+        setAiResult(clientMatchItems(items, products))
+      } catch {
+        setAiResult({ matched: [], not_available: items, _aiDown: true })
+      }
     }
     setStep('done')
   }
@@ -257,17 +305,20 @@ export default function OCRScanner() {
               ))}
             </div>
 
-            {/* AI service down warning */}
-            {aiResult._aiDown && (
-              <div style={{ padding: '10px 16px', borderRadius: 9, marginBottom: '1.25rem', fontSize: '.83rem', background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <Icon name="warning" size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+            {/* Fallback mode notices */}
+            {aiResult._clientFallback && (
+              <div style={{ padding: '10px 16px', borderRadius: 9, marginBottom: '1.25rem', fontSize: '.83rem', background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <Icon name="info" size={16} style={{ flexShrink: 0, marginTop: 1 }} />
                 <span>
-                  <strong>AI service is not running.</strong> Start it with:{' '}
-                  <code style={{ background: '#fef3c7', padding: '1px 6px', borderRadius: 4, fontSize: '.8rem' }}>
-                    cd ai-service &amp;&amp; uvicorn main:app --reload
-                  </code>
-                  {' '}then re-scan.
+                  <strong>Matched using smart text search</strong> (AI service offline). For higher accuracy start the AI service:{' '}
+                  <code style={{ background: '#fef3c7', padding: '1px 6px', borderRadius: 4, fontSize: '.8rem' }}>cd ai-service &amp;&amp; uvicorn main:app --reload</code>
                 </span>
+              </div>
+            )}
+            {aiResult._aiDown && (
+              <div style={{ padding: '10px 16px', borderRadius: 9, marginBottom: '1.25rem', fontSize: '.83rem', background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <Icon name="warning" size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span><strong>Could not match products.</strong> Check your internet connection and try again.</span>
               </div>
             )}
 
